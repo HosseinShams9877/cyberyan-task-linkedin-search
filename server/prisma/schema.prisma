@@ -1,0 +1,157 @@
+// Single source of truth for the database schema.
+//
+// The datasource provider is rewritten into prisma/schema.generated.prisma by
+// scripts/prisma-schema.mjs (SQLite when DATABASE_URL is file:…, PostgreSQL for
+// postgres:// URLs such as Neon), so the same models run locally and on Vercel.
+//
+// Everything here is provider-agnostic on purpose: no String[], no Json and no
+// native database types. Repeated values live in real relations
+// (Skill/ProfileSkill/Experience/Education) and the untouched source payloads are
+// kept as JSON strings so nothing from the dataset is lost.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Profile {
+  id       Int     @id @default(autoincrement())
+  sourceId String? // dataset row id, when the source shard carried one
+
+  fullName         String
+  firstName        String?
+  lastName         String?
+  gender           String?
+  linkedinUrl      String  @unique
+  linkedinUsername String?
+  linkedinId       String?
+  industry         String?
+  summary          String?
+
+  // Current position, taken from the primary entry of `experience`.
+  jobTitle        String?
+  jobTitleRole    String?
+  jobTitleSubRole String?
+  jobTitleLevels  String? // JSON array of strings
+  jobStartDate    String?
+  jobSummary      String?
+
+  companyName        String?
+  companySize        String?
+  companyIndustry    String?
+  companyWebsite     String?
+  companyLinkedinUrl String?
+  companyFounded     Int?
+  companyLocation    String?
+
+  locationName String?
+  locality     String?
+  metro        String?
+  region       String?
+  country      String?
+  continent    String?
+  geo          String?
+
+  connections    Int?
+  inferredSalary String?
+  inferredYears  Int?
+  birthYear      Int?
+
+  // Structured payloads preserved verbatim (JSON strings) for the profile view.
+  emailsJson         String?
+  phoneNumbersJson   String?
+  interestsJson      String?
+  languagesJson      String?
+  certificationsJson String?
+  socialProfilesJson String?
+  locationNamesJson  String?
+  regionsJson        String?
+  countriesJson      String?
+
+  // Lowercased haystack: name + title + company + location + skills.
+  // SQLite has no `mode: "insensitive"`, so case-insensitive search is done by
+  // matching lowercased needles against this column on both providers.
+  searchText String
+
+  dataVersion String?
+  sourceLine  Int?
+  partial     Boolean @default(false)
+
+  skills      ProfileSkill[]
+  experiences Experience[]
+  educations  Education[]
+
+  createdAt DateTime @default(now())
+
+  @@index([jobTitle])
+  @@index([jobTitleRole])
+  @@index([companyName])
+  @@index([industry])
+  @@index([country])
+  @@index([region])
+  @@index([locality])
+}
+
+model Skill {
+  id       Int            @id @default(autoincrement())
+  name     String         @unique
+  profiles ProfileSkill[]
+}
+
+model ProfileSkill {
+  profileId Int
+  skillId   Int
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  skill     Skill   @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([profileId, skillId])
+  @@index([skillId])
+}
+
+model Experience {
+  id              Int     @id @default(autoincrement())
+  profileId       Int
+  title           String?
+  titleRole       String?
+  titleLevels     String? // JSON array of strings
+  companyName     String?
+  companySize     String?
+  companyIndustry String?
+  companyWebsite  String?
+  locationName    String?
+  startDate       String?
+  endDate         String?
+  isPrimary       Boolean @default(false)
+  isCurrent       Boolean @default(false)
+  summary         String?
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([companyName])
+  @@index([title])
+}
+
+model Education {
+  id           Int     @id @default(autoincrement())
+  profileId    Int
+  school       String?
+  schoolType   String?
+  locationName String?
+  degrees      String? // JSON array of strings
+  majors       String? // JSON array of strings
+  minors       String? // JSON array of strings
+  gpa          String?
+  startDate    String?
+  endDate      String?
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([school])
+}

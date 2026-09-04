@@ -1,0 +1,33 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "version": 2,
+  "builds": [
+    {
+      "src": "server/api/index.ts",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "server/src/generated/prisma/**",
+          "server/prisma/schema.generated.prisma"
+        ]
+      }
+    },
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "client/dist"
+      }
+    }
+  ],
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/server/api/index.ts" },
+    {
+      "src": "/assets/(.*)",
+      "headers": { "cache-control": "public, max-age=31536000, immutable" },
+      "continue": true
+    },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
+}

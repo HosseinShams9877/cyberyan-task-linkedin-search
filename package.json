@@ -1,0 +1,27 @@
+{
+  "name": "linkedin-search-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LinkedIn Dataset Search Engine - React + Vite client, Express + Prisma API, deployable to Vercel",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "install:all": "npm --prefix server install && npm --prefix client install",
+    "setup": "npm run install:all && npm run db:push && npm run seed",
+    "db:push": "npm --prefix server run db:push",
+    "seed": "npm --prefix server run seed",
+    "dev": "concurrently --names api,web --prefix-colors blue,magenta --kill-others-on-fail \"npm --prefix server run dev\" \"npm --prefix client run dev\"",
+    "dev:api": "npm --prefix server run dev",
+    "dev:web": "npm --prefix client run dev",
+    "build": "npm --prefix client run build && npm --prefix server run build",
+    "vercel-build": "npm --prefix client install --include=dev && npm --prefix client run build",
+    "start": "npm --prefix server run start",
+    "typecheck": "npm --prefix server run typecheck && npm --prefix client run typecheck",
+    "studio": "npm --prefix server run studio"
+  },
+  "devDependencies": {
+    "concurrently": "10.0.5"
+  }
+}

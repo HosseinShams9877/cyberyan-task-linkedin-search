@@ -1,0 +1,74 @@
+@import 'tailwindcss';
+
+/*
+ * Tailwind v4 is configured in CSS (no tailwind.config.js). These custom tokens
+ * become utilities such as `bg-surface`, `text-muted` and `border-line`.
+ */
+@theme {
+  --color-canvas: oklch(0.19 0.02 260);
+  --color-surface: oklch(0.24 0.02 260);
+  --color-surface-2: oklch(0.28 0.02 260);
+  --color-line: oklch(0.36 0.02 260);
+  --color-muted: oklch(0.7 0.02 260);
+  --color-brand: oklch(0.68 0.13 235);
+  --color-brand-strong: oklch(0.58 0.15 240);
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-canvas text-slate-100 antialiased;
+    font-family: var(--font-sans);
+  }
+
+  /* Consistent focus ring for keyboard users on every interactive element. */
+  :where(a, button, input, select, [tabindex]):focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand;
+  }
+}
+
+/*
+ * Declared with `@utility` rather than inside `@layer components`, because Tailwind
+ * v4 only lets `@apply` reference registered utilities - and `.btn-primary` needs to
+ * apply `btn`.
+ */
+@utility card {
+  @apply rounded-xl border border-line/70 bg-surface/80 shadow-sm;
+}
+
+@utility field {
+  @apply w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm text-slate-100
+    placeholder:text-muted/70 focus:border-brand focus:outline-none;
+}
+
+@utility chip {
+  @apply inline-flex items-center rounded-full border border-line/80 bg-surface-2 px-2.5 py-0.5
+    text-xs font-medium text-slate-200;
+}
+
+/** A skill chip that matched the search - tinted, and always first in the row. */
+@utility chip-match {
+  @apply border-brand/50 bg-brand-strong/20 text-brand;
+}
+
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium
+    transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+@utility btn-primary {
+  @apply btn bg-brand-strong text-white hover:bg-brand;
+}
+
+@utility btn-ghost {
+  @apply btn border border-line bg-surface-2 text-slate-200 hover:bg-line/40;
+}
+
+/* Recharts renders an SVG that inherits the page font but not its focus styles. */
+.recharts-wrapper text {
+  font-size: 12px;
+}

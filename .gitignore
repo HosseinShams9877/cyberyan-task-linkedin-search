@@ -1,0 +1,36 @@
+# --- Dependencies -----------------------------------------------------------
+node_modules/
+.npm/
+npm-debug.log*
+
+# --- Build output -----------------------------------------------------------
+client/dist/
+server/dist/
+*.tsbuildinfo
+
+# --- Secrets ----------------------------------------------------------------
+# .env.example files ARE committed; real .env files are not.
+.env
+.env.*
+!.env.example
+
+# --- Prisma -----------------------------------------------------------------
+# Local SQLite database and the client/schema generated from schema.prisma.
+server/prisma/*.db
+server/prisma/*.db-journal
+server/prisma/schema.generated.prisma
+server/src/generated/
+
+# --- Platform / tooling -----------------------------------------------------
+.vercel/
+.claude/settings.local.json
+.scratch/
+coverage/
+*.log
+
+# --- OS ---------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+
+# NOTE: data/ is deliberately NOT ignored - the Vercel build seeds the database
+# from it (see README, "How deployment works"). Keep the repository private.

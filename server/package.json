@@ -1,0 +1,41 @@
+{
+  "name": "linkedin-search-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Express + Prisma API for the LinkedIn Dataset Search Engine",
+  "license": "UNLICENSED",
+  "main": "dist/index.js",
+  "prisma": {
+    "schema": "prisma/schema.generated.prisma"
+  },
+  "scripts": {
+    "prisma:schema": "node scripts/prisma-schema.mjs",
+    "generate": "npm run prisma:schema && prisma generate",
+    "db:push": "npm run prisma:schema && prisma db push --skip-generate && prisma generate",
+    "seed": "tsx prisma/seed.ts",
+    "ingest:report": "tsx src/ingest/report.ts",
+    "dev": "tsx watch src/index.ts",
+    "build": "npm run generate && tsc -p tsconfig.json && node scripts/copy-generated.mjs",
+    "start": "node dist/index.js",
+    "studio": "npm run prisma:schema && prisma studio",
+    "typecheck": "tsc -p tsconfig.typecheck.json",
+    "postinstall": "node scripts/postinstall.mjs"
+  },
+  "dependencies": {
+    "@prisma/client": "6.19.3",
+    "cors": "2.8.6",
+    "express": "5.2.1",
+    "zod": "4.5.4"
+  },
+  "devDependencies": {
+    "@types/cors": "2.8.19",
+    "@types/express": "5.0.6",
+    "@types/node": "26.4.1",
+    "prisma": "6.19.3",
+    "tsx": "4.23.13",
+    "typescript": "5.9.3"
+  },
+  "engines": {
+    "node": ">=18.18"
+  }
+}

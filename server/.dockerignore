@@ -1,0 +1,14 @@
+# Build context hygiene for `docker build ./server`.
+node_modules
+dist
+src/generated
+prisma/*.db
+prisma/*.db-journal
+prisma/schema.generated.prisma
+.env
+.env.*
+!.env.example
+*.log
+*.tsbuildinfo
+Dockerfile
+.dockerignore
