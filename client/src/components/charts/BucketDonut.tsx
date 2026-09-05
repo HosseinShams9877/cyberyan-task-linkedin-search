@@ -1,7 +1,8 @@
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import type { Bucket } from '../../lib/api-types';
+import { formatNumber, formatPercent } from '../../lib/format';
 import ChartTooltip from './ChartTooltip';
-import { CHART } from './theme';
+import { useChart } from './theme';
 
 /**
  * Part-to-whole across a handful of named categories - the one place in this
@@ -9,24 +10,26 @@ import { CHART } from './theme';
  * categorical and assigned in fixed order.
  *
  * Slices are separated by a 2px stroke in the surface color: the gap does the
- * separating, so no slice needs an outline of its own.
+ * separating, so no slice needs an outline of its own. The stroke follows the theme,
+ * or the ring would show dark seams on a white card.
  */
 export default function BucketDonut({
   rows,
   format,
-  unit = 'profiles',
+  unit,
 }: {
   rows: Bucket[];
   format: (label: string) => string;
   unit?: string;
 }) {
+  const { chart, rtl } = useChart();
   const total = rows.reduce((sum, row) => sum + row.count, 0);
   const data = rows.map((row, index) => ({
     label: format(row.label),
     full: format(row.label),
     count: row.count,
     share: total === 0 ? 0 : row.count / total,
-    color: CHART.categorical[index % CHART.categorical.length],
+    color: chart.categorical[index % chart.categorical.length],
   }));
 
   return (
@@ -40,7 +43,11 @@ export default function BucketDonut({
             nameKey="label"
             innerRadius="58%"
             outerRadius="88%"
-            stroke={CHART.surface}
+            // The ring is read outward from twelve o'clock, so in Persian it winds
+            // anticlockwise: the largest slice still lands where the eye starts.
+            startAngle={90}
+            endAngle={rtl ? 450 : -270}
+            stroke={chart.surface}
             strokeWidth={2}
             isAnimationActive={false}
             activeShape={{ fillOpacity: 0.82 }}
@@ -61,10 +68,18 @@ export default function BucketDonut({
               style={{ backgroundColor: slice.color }}
               aria-hidden="true"
             />
-            <span className="min-w-0 flex-1 truncate text-slate-200">{slice.label}</span>
+            <span dir="auto" className="min-w-0 flex-1 truncate text-ink-body rtl:text-right">{slice.label}</span>
+            {/*
+              A dot between the two numbers, not just a gap: set in Persian digits,
+              "50 30%" reads as one four-digit number, and the dot is the separator the
+              results line and the chart subtitles already use.
+            */}
             <span className="shrink-0 text-muted tabular-nums">
-              {slice.count.toLocaleString('en-US')}
-              <span className="ml-1 text-muted/70">{`${(slice.share * 100).toFixed(0)}%`}</span>
+              {formatNumber(slice.count)}
+              <span aria-hidden="true" className="mx-1 text-muted/50">
+                &middot;
+              </span>
+              <span className="text-muted/70">{formatPercent(slice.share, 1)}</span>
             </span>
           </li>
         ))}

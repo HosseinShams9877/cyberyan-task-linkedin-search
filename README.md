@@ -6,7 +6,7 @@ of aggregates. One repository, two apps, one Vercel deployment.
 
 | | |
 |---|---|
-| **Frontend** | React 19 + Vite + TypeScript, Tailwind CSS v4, Zustand, Recharts |
+| **Frontend** | React 19 + Vite + TypeScript, Tailwind CSS v4, Zustand, Recharts, English/Persian + dark/light |
 | **Backend** | Node 20+, Express 5 + TypeScript, Prisma 6, zod validation |
 | **Database** | SQLite locally (`file:./dev.db`), PostgreSQL (Neon) in production |
 | **Hosting** | Vercel - static client + one serverless function, same origin |
@@ -23,9 +23,10 @@ linkedin-search-app/
 ├── client/                  React + Vite frontend
 │   ├── src/
 │   │   ├── components/      SearchBar, ResultList, ProfileDrawer, Dashboard, charts/
+│   │   ├── i18n/            language + theme context, en.ts / fa.ts catalogues
 │   │   ├── lib/             api.ts (fetch wrapper), api-types.ts, format.ts
 │   │   ├── store/           useSearchStore.ts (Zustand: filters, debounce, requests)
-│   │   └── index.css        Tailwind v4 theme tokens + component utilities
+│   │   └── index.css        Tailwind v4 tokens (light default, dark override) + utilities
 │   └── vite.config.ts
 ├── server/                  Express + Prisma API
 │   ├── api/index.ts         Vercel entrypoint - `export default createApp()`
@@ -269,7 +270,146 @@ value is reachable only by hovering.
 
 ---
 
-## 4. Deploy to Vercel
+## 4. Language, theme and direction
+
+Two buttons in the header, top right: one swaps the language, one swaps the theme.
+The defaults are **English** and **dark**. Both choices persist in `localStorage`
+under `lds.lang` and `lds.theme`, so a reload keeps them.
+
+Everything hangs off three attributes on `<html>`:
+
+| Attribute | Set to | Drives |
+|---|---|---|
+| `lang` | `en` / `fa` | the font (`Inter` / `Vazirmatn`) and the screen-reader voice |
+| `dir` | `ltr` / `rtl` | every logical property in the stylesheet |
+| `class` | `dark` or absent | the token set |
+
+### No flash on first paint
+
+An inline script in `client/index.html` reads both keys and stamps those three
+attributes **before** the bundle loads, so a user who chose light Persian never
+sees a frame of dark English. `applyPrefs()` in `client/src/i18n/index.tsx` performs
+the same three writes on every later toggle. If `localStorage` throws - a sandboxed
+iframe, Safari private mode - the script falls through to the markup defaults and
+the app still renders.
+
+### Translations
+
+`client/src/i18n/` is a hand-written React context, not a library:
+`PreferencesProvider` owns the language and theme, and `useT()` returns a
+`t(key, vars)` that looks up a message and fills its `{placeholders}`.
+
+`en.ts` is the source of truth for the key set and exports
+`type MessageKey = keyof typeof en`. `fa.ts` is typed `Record<MessageKey, string>`,
+so **a key added to English fails the build until it is translated** - a missing
+string is a type error rather than a blank space on screen.
+
+Numbers, percentages and dates never appear as literal digits in a catalogue. They
+are formatted by `client/src/lib/format.ts` against the active locale (`en-US` /
+`fa-IR`) and interpolated, which is what gives Persian its own digits and grouping.
+Chart tick formatters and Recharts label renderers have no component to read a hook
+from, so the locale reaches `format.ts` through a module-level variable that the
+provider keeps in step during render.
+
+Dataset values - names, job titles, skills, company names, profile summaries - stay
+in English in both languages, because they come from the source file rather than a
+catalogue. The English prose blocks in the profile drawer carry `dir="ltr"` so their
+punctuation stays put on a Persian page.
+
+### The dark strategy in Tailwind v4
+
+Tailwind v4 has no `tailwind.config.js`; the class strategy is one line of CSS in
+`client/src/index.css`:
+
+```css
+@custom-variant dark (&:where(.dark, .dark *));
+```
+
+That gives the usual `dark:` variant, but almost nothing in this app needs it. The
+colours are semantic tokens - `bg-canvas`, `bg-surface`, `text-ink`, `border-line`,
+`text-brand` - declared in `@theme` with their **light** values, then redefined for
+`html.dark` in `@layer base`. A component names a role, and the theme decides the
+value:
+
+```css
+@theme {
+  --color-canvas: oklch(0.976 0.004 255);   /* light */
+  --color-ink:    oklch(0.24 0.025 258);
+}
+@layer base {
+  html.dark {
+    --color-canvas: oklch(0.19 0.02 260);   /* dark */
+    --color-ink:    oklch(0.98 0.004 255);
+  }
+}
+```
+
+Each theme's palette is *chosen for its own background*, not derived by inverting
+the other: dark brand is a lighter, less saturated blue than the light one, because
+the same hex cannot carry contrast on both surfaces. The `.dark` override lives in
+`@layer base` rather than a second `@theme` block so it outranks the theme layer
+regardless of source order. `color-scheme` is set per theme too, so form controls
+and scrollbars follow.
+
+The glass look is two utilities: `card` for panels and `pane` for the sticky header
+and drawer chrome, each a `backdrop-blur` over a translucent surface token, plus a
+fixed radial wash behind the page built with `color-mix()` off the brand token.
+
+### RTL
+
+Layout uses logical properties throughout - `ms-`/`me-`, `ps-`/`pe-`,
+`start-`/`end-`, `border-s`, `text-start`/`text-end` - so `dir="rtl"` mirrors the
+whole page with no `rtl:` overrides and no duplicated classes. The pagination
+chevrons flip their path, since a "next" arrow points the other way in Persian.
+
+Dataset values stay English even when the interface is Persian, and any value that
+can overflow is truncated. `text-overflow: ellipsis` cuts at the logical end of the
+line, so an English string that inherits an RTL page loses its head instead of its
+tail - `Vice President, Military and Civili...` arrives as `...ry and Civilian Debt
+Acquisition and Relief`. Every truncating value therefore carries `dir="auto"` and
+resolves its own direction from its first strong character: the name, job title,
+company, location and role in `ResultCard`, the name and title in `ProfileDrawer`,
+and the donut legend labels. `rtl:text-right` then puts the alignment back to the
+page direction, so the line still starts at the start edge of its card. `auto`
+rather than a fixed `ltr` because those same slots fall back to a Persian string
+when the record has no value.
+
+Recharts is the exception. It has no RTL mode: marks are placed from absolute SVG
+coordinates and an axis domain, and CSS `direction` cannot mirror a plot. So
+`.recharts-wrapper` is pinned to `direction: ltr` to keep the internal coordinate
+system stable, and each chart mirrors itself explicitly:
+
+- `reversed` on the value axis and `orientation` on the category axis,
+- swapped chart margins and flipped bar corner `radius`,
+- the bar value labels left at `right`, which Recharts reads in value space, so a
+  reversed axis makes it the growing end of the bar in either direction,
+- for the donut, `startAngle={90}` with `endAngle={rtl ? 450 : -270}` so slices
+  wind the reading direction,
+- tooltips take the document direction back with `dir={dir}`.
+
+Chart colours are concrete hex chosen in JS by the active theme
+(`client/src/components/charts/theme.ts`), because Recharts paints SVG attributes
+and an SVG `fill` cannot read a per-theme custom property. Both palettes were
+validated for colour-vision deficiency separation against their own surface; every
+chart also ships a `Table` toggle and named legend, so no series is identified by
+colour alone.
+
+### Fonts
+
+Inter and Vazirmatn load from Google Fonts in `client/index.html`, with
+`preconnect` and `display=swap`. Persian selection is one rule - `html[lang='fa']`
+redefines `--font-sans` to the Vazirmatn stack - so every `font-sans` element
+follows without touching a single component.
+
+### Effect on deployment
+
+None. The i18n layer is a React context written in this repo, so `client/package.json`
+gained no dependency and the Vercel install and build steps are byte-for-byte what
+they were. The fonts are two `<link>` tags in the static HTML.
+
+---
+
+## 5. Deploy to Vercel
 
 Three things happen once: push the repo, create the database, tell Vercel the
 connection string. After that every deployment is a `git push`.

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { formatNumber, formatSalary, humanize, titleCase } from '../lib/format';
+import { useT } from '../i18n';
+import { formatNumber, formatPercent, formatSalary, humanize, titleCase } from '../lib/format';
 import { useSearchStore } from '../store/useSearchStore';
 import BucketBars from './charts/BucketBars';
 import BucketColumns from './charts/BucketColumns';
@@ -9,10 +10,18 @@ import { foldTail } from './charts/fold';
 import Spinner from './Spinner';
 import StatCard from './StatCard';
 
+/** Connection bands are already display-ready ("501-1000"), so they pass through. */
 const asis = (value: string): string => value;
-const percent = (part: number, whole: number): string => (whole === 0 ? '-' : `${Math.round((part / whole) * 100)}%`);
+
+/**
+ * Sentinel for the donut's folded tail. A label that cannot collide with a real
+ * `job_title_role` value, so the renderer can tell the invented bucket from a
+ * dataset one and translate only that.
+ */
+const OTHER = '\u0000other';
 
 export default function Dashboard() {
+  const t = useT();
   const stats = useSearchStore((s) => s.stats);
   const error = useSearchStore((s) => s.statsError);
   const loadStats = useSearchStore((s) => s.loadStats);
@@ -23,9 +32,9 @@ export default function Dashboard() {
 
   if (error) {
     return (
-      <div className="card border-red-500/40 bg-red-500/5 p-6 text-sm" role="alert">
-        <p className="font-medium text-red-300">Could not load the dashboard</p>
-        <p className="mt-1 text-slate-300">{error}</p>
+      <div className="notice p-6 text-sm" role="alert">
+        <p className="font-medium text-danger">{t('dash.errorTitle')}</p>
+        <p className="mt-1 text-ink-soft">{error}</p>
       </div>
     );
   }
@@ -34,7 +43,7 @@ export default function Dashboard() {
     return (
       <div className="card flex items-center justify-center gap-3 p-12 text-sm text-muted">
         <Spinner className="h-5 w-5 text-brand" />
-        Aggregating the dataset...
+        {t('dash.loading')}
       </div>
     );
   }
@@ -42,45 +51,53 @@ export default function Dashboard() {
   const { totals } = stats;
   // The API returns the ten biggest buckets, not a full partition, so the donut is
   // honest only about the share *within* that ten - which is what its subtitle says.
-  const roleRows = foldTail(stats.byRole, 4);
+  const roleRows = foldTail(stats.byRole, 4, OTHER);
   const roleTotal = stats.byRole.reduce((sum, row) => sum + row.count, 0);
   const topCountry = stats.byCountry[0];
+
+  // The folded tail is the one bucket label this app invents rather than reads from
+  // the dataset, so it is the one that needs translating.
+  const roleLabel = (label: string) => (label === OTHER ? t('value.other') : humanize(label));
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard
-          label="Profiles indexed"
+          label={t('stat.profiles')}
           value={formatNumber(totals.profiles)}
-          hint="Parsed from the source file in ./data"
+          hint={t('stat.profilesHint')}
           hero
           className="col-span-2"
         />
         <StatCard
-          label="Contactable"
-          value={percent(totals.withEmail, totals.profiles)}
-          hint={`${formatNumber(totals.withEmail)} have an email on file`}
+          label={t('stat.contactable')}
+          value={formatPercent(totals.withEmail, totals.profiles)}
+          hint={t('stat.contactableHint', { count: formatNumber(totals.withEmail) })}
         />
-        <StatCard label="Distinct skills" value={formatNumber(totals.skills)} hint="Across all profiles" />
-        <StatCard label="Companies" value={formatNumber(totals.companies)} hint="Current employers" />
-        <StatCard label="Countries" value={formatNumber(totals.countries)} hint="With at least one profile" />
+        <StatCard label={t('stat.skills')} value={formatNumber(totals.skills)} hint={t('stat.skillsHint')} />
+        <StatCard label={t('stat.companies')} value={formatNumber(totals.companies)} hint={t('stat.companiesHint')} />
+        <StatCard label={t('stat.countries')} value={formatNumber(totals.countries)} hint={t('stat.countriesHint')} />
         <StatCard
-          label="Avg connections"
+          label={t('stat.avgConnections')}
           value={formatNumber(totals.avgConnections === null ? null : Math.round(totals.avgConnections))}
-          hint="Mean across profiles that report a count"
+          hint={t('stat.avgConnectionsHint')}
         />
         <StatCard
-          label="Avg experience"
-          value={totals.avgYearsExperience === null ? '-' : `${totals.avgYearsExperience} yrs`}
-          hint="Inferred from the work history"
+          label={t('stat.avgExperience')}
+          value={
+            totals.avgYearsExperience === null
+              ? '-'
+              : t('stat.years', { years: formatNumber(totals.avgYearsExperience) })
+          }
+          hint={t('stat.avgExperienceHint')}
         />
       </div>
 
       <ChartCard
-        title="Most common skills"
-        subtitle={`Profiles listing each skill, top ${stats.topSkills.length}`}
+        title={t('chart.skillsTitle')}
+        subtitle={t('chart.skillsSubtitle', { count: formatNumber(stats.topSkills.length) })}
         rows={stats.topSkills}
-        unit="Skill"
+        unit={t('unit.skill')}
         format={titleCase}
         total={totals.profiles}
       >
@@ -89,20 +106,20 @@ export default function Dashboard() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <ChartCard
-          title="Role mix"
-          subtitle={`Share of the ${formatNumber(roleTotal)} profiles in the ten biggest roles`}
+          title={t('chart.roleTitle')}
+          subtitle={t('chart.roleSubtitle', { count: formatNumber(roleTotal) })}
           rows={roleRows}
-          unit="Role"
-          format={humanize}
+          unit={t('unit.role')}
+          format={roleLabel}
         >
-          <BucketDonut rows={roleRows} format={humanize} />
+          <BucketDonut rows={roleRows} format={roleLabel} />
         </ChartCard>
 
         <ChartCard
-          title="Network size"
-          subtitle="Profiles by number of LinkedIn connections"
+          title={t('chart.connectionsTitle')}
+          subtitle={t('chart.connectionsSubtitle')}
           rows={stats.byConnectionBand}
-          unit="Connections"
+          unit={t('unit.connections')}
           format={asis}
           total={totals.profiles}
         >
@@ -110,10 +127,10 @@ export default function Dashboard() {
         </ChartCard>
 
         <ChartCard
-          title="Industries"
-          subtitle="Top 10 by profile count"
+          title={t('chart.industryTitle')}
+          subtitle={t('chart.industrySubtitle')}
           rows={stats.byIndustry}
-          unit="Industry"
+          unit={t('unit.industry')}
           format={titleCase}
           total={totals.profiles}
         >
@@ -121,10 +138,10 @@ export default function Dashboard() {
         </ChartCard>
 
         <ChartCard
-          title="Employers"
-          subtitle="Top 10 current companies"
+          title={t('chart.companyTitle')}
+          subtitle={t('chart.companySubtitle')}
           rows={stats.byCompany}
-          unit="Company"
+          unit={t('unit.company')}
           format={titleCase}
           total={totals.profiles}
         >
@@ -132,25 +149,29 @@ export default function Dashboard() {
         </ChartCard>
 
         <ChartCard
-          title="Inferred salary"
-          subtitle="Profiles per band, lowest first"
+          title={t('chart.salaryTitle')}
+          subtitle={t('chart.salarySubtitle')}
           rows={stats.bySalaryBand}
-          unit="Band"
+          unit={t('unit.band')}
           format={formatSalary}
           total={totals.profiles}
         >
-          <BucketBars rows={stats.bySalaryBand} format={formatSalary} unit="profiles" labelWidth={128} total={totals.profiles} />
+          <BucketBars rows={stats.bySalaryBand} format={formatSalary} labelWidth={128} total={totals.profiles} />
         </ChartCard>
 
         <ChartCard
-          title="Countries"
+          title={t('chart.countryTitle')}
           subtitle={
             topCountry
-              ? `Top ${stats.byCountry.length} · ${titleCase(topCountry.label)} holds ${percent(topCountry.count, totals.profiles)}`
-              : 'Top 10 by profile count'
+              ? t('chart.countrySubtitle', {
+                  count: formatNumber(stats.byCountry.length),
+                  label: titleCase(topCountry.label),
+                  share: formatPercent(topCountry.count, totals.profiles),
+                })
+              : t('chart.countrySubtitleFallback')
           }
           rows={stats.byCountry}
-          unit="Country"
+          unit={t('unit.country')}
           format={titleCase}
           total={totals.profiles}
         >

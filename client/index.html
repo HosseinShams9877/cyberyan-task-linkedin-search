@@ -1,10 +1,55 @@
 <!doctype html>
-<html lang="en" class="h-full">
+<html lang="en" dir="ltr" class="dark h-full">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Search and analyse a LinkedIn profile dataset: keyword search, job title and skill filters, and an aggregate dashboard." />
     <title>LinkedIn Dataset Search Engine</title>
+
+    <!--
+      Favicon as a data URI: the same rounded "in" mark the header wears, with no
+      request to make and no binary asset in the repo. One fixed blue, because a
+      favicon cannot follow the theme.
+    -->
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232a78d6'/%3E%3Ctext x='16' y='23' text-anchor='middle' font-family='Segoe UI,Helvetica,Arial,sans-serif' font-size='18' font-weight='700' fill='%23ffffff'%3Ein%3C/text%3E%3C/svg%3E"
+    />
+
+    <!--
+      Inter for English, Vazirmatn for Persian. Both are loaded up front rather than
+      injected on switch: the pair is ~40 KB of woff2 subsets, and swapping the sheet
+      at runtime would show a frame of fallback text on every language toggle.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Vazirmatn:wght@400;500;600;700&display=swap"
+    />
+
+    <script>
+      /*
+        The stored language and theme have to be on <html> before the first paint, or a
+        dark-theme user gets a white flash and a Persian user a frame of LTR layout.
+        This is the same write as applyPrefs() in src/i18n; it runs once, ahead of the
+        bundle, and React then re-applies the identical values.
+      */
+      (function () {
+        try {
+          var lang = localStorage.getItem('lds.lang');
+          var theme = localStorage.getItem('lds.theme');
+          if (lang !== 'en' && lang !== 'fa') lang = 'en';
+          if (theme !== 'dark' && theme !== 'light') theme = 'dark';
+          var root = document.documentElement;
+          root.lang = lang;
+          root.dir = lang === 'fa' ? 'rtl' : 'ltr';
+          root.classList.toggle('dark', theme === 'dark');
+        } catch (error) {
+          /* Private mode blocks localStorage; the markup defaults already stand. */
+        }
+      })();
+    </script>
   </head>
   <body class="h-full">
     <div id="root"></div>

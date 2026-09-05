@@ -1,4 +1,6 @@
+import { useT } from '../i18n';
 import type { Bucket } from '../lib/api-types';
+import { formatNumber } from '../lib/format';
 
 /**
  * Dropdown backed by a `/api/filters` bucket list. Counts are shown in the option
@@ -21,6 +23,7 @@ export default function FilterSelect({
   placeholder: string;
   onChange: (value: string) => void;
 }) {
+  const t = useT();
   return (
     <div>
       <label htmlFor={id} className="mb-1.5 block text-xs font-medium text-muted">
@@ -33,10 +36,10 @@ export default function FilterSelect({
         disabled={!options}
         onChange={(event) => onChange(event.target.value)}
       >
-        <option value="">{options ? placeholder : 'Loading...'}</option>
+        <option value="">{options ? placeholder : t('common.loading')}</option>
         {options?.map((option) => (
           <option key={option.label} value={option.label}>
-            {format(option.label)} ({option.count.toLocaleString('en-US')})
+            {t('filters.optionCount', { label: format(option.label), count: formatNumber(option.count) })}
           </option>
         ))}
       </select>

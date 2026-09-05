@@ -1,11 +1,13 @@
 import { useMemo } from 'react';
+import { useT } from '../i18n';
+import { formatNumber } from '../lib/format';
 import { useSearchStore } from '../store/useSearchStore';
-import { formatCount } from '../lib/format';
 import Pagination from './Pagination';
 import ResultCard from './ResultCard';
 import Spinner from './Spinner';
 
 export default function ResultList() {
+  const t = useT();
   const results = useSearchStore((s) => s.results);
   const loading = useSearchStore((s) => s.loading);
   const error = useSearchStore((s) => s.error);
@@ -16,15 +18,15 @@ export default function ResultList() {
   // page on screen, not a filter typed while the previous page is still showing.
   const matchTerms = useMemo(() => {
     if (!results) return [];
-    const raw = [results.query.skill ?? '', ...(results.query.keyword ?? '').split(/[s,]+/)];
+    const raw = [results.query.skill ?? '', ...(results.query.keyword ?? '').split(/[\s,]+/)];
     return [...new Set(raw.map((t) => t.trim().toLowerCase()).filter((t) => t.length >= 3))];
   }, [results]);
 
   if (error) {
     return (
-      <div className="card border-red-500/40 bg-red-500/5 p-6 text-sm" role="alert">
-        <p className="font-medium text-red-300">Search failed</p>
-        <p className="mt-1 text-slate-300">{error}</p>
+      <div className="notice p-6 text-sm" role="alert">
+        <p className="font-medium text-danger">{t('results.errorTitle')}</p>
+        <p className="mt-1 text-ink-soft">{error}</p>
       </div>
     );
   }
@@ -35,7 +37,7 @@ export default function ResultList() {
     return (
       <div className="card flex items-center justify-center gap-3 p-12 text-sm text-muted">
         <Spinner className="h-5 w-5 text-brand" />
-        Loading profiles...
+        {t('results.loading')}
       </div>
     );
   }
@@ -43,22 +45,29 @@ export default function ResultList() {
   if (results.results.length === 0) {
     return (
       <div className="card p-10 text-center">
-        <p className="font-medium text-slate-100">No profiles match these filters</p>
-        <p className="mx-auto mt-1 max-w-md text-sm text-muted">
-          Try a shorter keyword, or clear a filter to widen the search.
-        </p>
+        <p className="font-medium text-ink">{t('results.emptyTitle')}</p>
+        <p className="mx-auto mt-1 max-w-md text-sm text-muted">{t('results.emptyHint')}</p>
         <button type="button" className="btn-ghost mt-4" onClick={resetFilters}>
-          Clear all filters
+          {t('results.clearAll')}
         </button>
       </div>
     );
   }
 
   return (
-    <section aria-label="Search results" className="space-y-4">
+    <section aria-label={t('results.aria')} className="space-y-4">
       <p className="text-sm text-muted" aria-live="polite">
-        {formatCount(results.total, 'profile')} found
-        <span className="text-muted/70"> &middot; {results.tookMs} ms</span>
+        {/*
+          Two keys rather than a plural rule: English needs one/other and Persian needs
+          neither, so the catalogue carries both forms and the caller picks.
+        */}
+        {t(results.total === 1 ? 'results.foundOne' : 'results.foundMany', {
+          count: formatNumber(results.total),
+        })}
+        <span className="text-muted/70">
+          {' · '}
+          {t('results.took', { ms: formatNumber(results.tookMs) })}
+        </span>
       </p>
 
       <div

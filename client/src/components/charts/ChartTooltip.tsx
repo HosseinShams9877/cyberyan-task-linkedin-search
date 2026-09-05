@@ -1,4 +1,6 @@
-import { CHART } from './theme';
+import { usePrefs } from '../../i18n';
+import { formatNumber, formatPercent } from '../../lib/format';
+import { chartTheme } from './theme';
 
 interface Entry {
   value?: number | string;
@@ -16,7 +18,7 @@ interface Entry {
 export default function ChartTooltip({
   active,
   payload,
-  unit = 'profiles',
+  unit,
   format = (value: string) => value,
 }: {
   active?: boolean;
@@ -24,26 +26,34 @@ export default function ChartTooltip({
   unit?: string;
   format?: (label: string) => string;
 }) {
+  // Recharts renders the tooltip outside the chart's own React subtree in some
+  // layouts, so it reads the preferences itself rather than taking them as props.
+  const { t, theme, dir } = usePrefs();
   const entry = active ? payload?.[0] : undefined;
   if (!entry) return null;
 
   const row = entry.payload ?? {};
-  const count = typeof entry.value === 'number' ? entry.value.toLocaleString('en-US') : String(entry.value ?? '');
+  const count = typeof entry.value === 'number' ? formatNumber(entry.value) : String(entry.value ?? '');
 
   return (
-    <div className="rounded-lg border border-line bg-surface-2/95 px-3 py-2 text-xs shadow-xl backdrop-blur">
+    // The plot is force-LTR so Recharts' coordinates stay put; the tooltip is prose,
+    // so it takes the document direction back.
+    <div
+      dir={dir}
+      className="rounded-lg border border-line bg-surface-2/95 px-3 py-2 text-xs shadow-xl backdrop-blur"
+    >
       <p className="flex items-center gap-2">
         <span
           className="inline-block h-0.5 w-3 rounded-full"
-          style={{ backgroundColor: entry.color ?? CHART.series }}
+          style={{ backgroundColor: entry.color ?? chartTheme(theme).series }}
           aria-hidden="true"
         />
-        <span className="text-sm font-semibold text-slate-50">{count}</span>
-        <span className="text-muted">{unit}</span>
+        <span className="text-sm font-semibold text-ink tabular-nums">{count}</span>
+        <span className="text-muted">{unit ?? t('unit.profiles')}</span>
       </p>
-      <p className="mt-0.5 max-w-56 text-slate-300">{format(row.full ?? row.label ?? '')}</p>
+      <p className="mt-0.5 max-w-56 text-ink-body">{format(row.full ?? row.label ?? '')}</p>
       {row.share !== undefined ? (
-        <p className="text-muted">{`${(row.share * 100).toFixed(1)}% of the total`}</p>
+        <p className="text-muted">{t('chart.shareOfTotal', { share: formatPercent(row.share, 1, 1) })}</p>
       ) : null}
     </div>
   );

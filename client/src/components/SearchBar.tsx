@@ -1,8 +1,10 @@
+import { useT } from '../i18n';
 import { useSearchStore } from '../store/useSearchStore';
 import Spinner from './Spinner';
 
 /** Keyword box. Typing is debounced in the store, so there is no submit button. */
 export default function SearchBar() {
+  const t = useT();
   const keyword = useSearchStore((s) => s.filters.keyword);
   const loading = useSearchStore((s) => s.loading);
   const setFilter = useSearchStore((s) => s.setFilter);
@@ -10,10 +12,14 @@ export default function SearchBar() {
   return (
     <div className="relative">
       <label htmlFor="keyword" className="sr-only">
-        Search profiles
+        {t('search.label')}
       </label>
+      {/*
+        `start-3.5` and `end-3.5`, not left/right: in Persian the magnifier belongs on
+        the right edge where reading starts, and the spinner opposite it.
+      */}
       <svg
-        className="pointer-events-none absolute top-1/2 left-3.5 h-5 w-5 -translate-y-1/2 text-muted"
+        className="pointer-events-none absolute start-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted"
         viewBox="0 0 24 24"
         fill="none"
         aria-hidden="true"
@@ -24,14 +30,14 @@ export default function SearchBar() {
       <input
         id="keyword"
         type="search"
-        className="field py-3 pr-11 pl-11 text-base"
-        placeholder="Search by name, job title, company or skill"
+        className="field py-3 pe-11 ps-11 text-base"
+        placeholder={t('search.placeholder')}
         value={keyword}
         autoComplete="off"
         onChange={(event) => setFilter('keyword', event.target.value)}
       />
       {loading ? (
-        <Spinner className="absolute top-1/2 right-3.5 h-5 w-5 -translate-y-1/2 text-brand" />
+        <Spinner className="absolute end-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-brand" />
       ) : null}
     </div>
   );

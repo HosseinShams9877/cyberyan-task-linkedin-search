@@ -6,6 +6,7 @@
  * request is aborted, so fast typing cannot produce out-of-order results.
  */
 import { create } from 'zustand';
+import { translate } from '../i18n';
 import { api, ApiRequestError, toParams } from '../lib/api';
 import type { FiltersResponse, ProfileDetail, SearchResponse, StatsResponse } from '../lib/api-types';
 
@@ -57,8 +58,13 @@ interface SearchState {
   closeProfile: () => void;
 }
 
+/*
+ * An ApiRequestError carries the server's own message, which is English and stays as
+ * it is - it names a status or a field. Only the fallback, which this app writes
+ * itself, is translated.
+ */
 const message = (error: unknown): string =>
-  error instanceof ApiRequestError ? error.message : 'Unexpected error while contacting the API';
+  error instanceof ApiRequestError ? error.message : translate('error.transport');
 
 const isAbort = (error: unknown): boolean => error instanceof DOMException && error.name === 'AbortError';
 

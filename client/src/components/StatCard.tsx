@@ -20,7 +20,7 @@ export default function StatCard({
   return (
     <div className={`card p-4 ${className}`}>
       <p className="text-xs font-medium tracking-wide text-muted uppercase">{label}</p>
-      <p className={`mt-1 font-semibold text-slate-50 ${hero ? 'text-5xl' : 'text-2xl'}`}>{value}</p>
+      <p className={`mt-1 font-semibold text-ink ${hero ? 'text-4xl sm:text-5xl' : 'text-2xl'}`}>{value}</p>
       {hint ? <p className="mt-1 text-xs text-muted">{hint}</p> : null}
     </div>
   );

@@ -1,3 +1,4 @@
+import { useT } from '../i18n';
 import type { ProfileSummary } from '../lib/api-types';
 import { formatNumber, humanize, initials, titleCase } from '../lib/format';
 
@@ -39,6 +40,7 @@ export default function ResultCard({
   matchTerms: string[];
   onOpen: (id: number) => void;
 }) {
+  const t = useT();
   const name = titleCase(profile.fullName);
   const location = titleCase(profile.locationName ?? profile.country);
   const { shown, matched } = pickSkills(profile.skills, matchTerms);
@@ -47,28 +49,38 @@ export default function ResultCard({
     <article className="card transition-colors hover:border-brand/60">
       <button
         type="button"
-        className="w-full p-4 text-left"
+        className="w-full p-4 text-start"
         onClick={() => onOpen(profile.id)}
-        aria-label={`Open profile for ${name}`}
+        aria-label={t('card.open', { name })}
       >
         <div className="flex items-start gap-3">
           <span
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand-strong/25 text-sm font-semibold text-brand"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand/15 text-sm font-semibold text-brand"
             aria-hidden="true"
           >
             {initials(name)}
           </span>
+          {/*
+            Dataset values are English on a Persian page, so each line resolves its own
+            direction and `truncate` clips the end of the string. Left to inherit the
+            page's, an English line loses its head instead: "Vice President, Military
+            and Civili…" comes out as "…ry and Civilian Debt Acquisition and Relief".
+            The alignment is set back to the page direction, so the line still starts at
+            the card's start edge next to the avatar.
+          */}
           <div className="min-w-0 flex-1">
-            <h3 className="truncate font-semibold text-slate-50">{name}</h3>
-            <p className="truncate text-sm text-slate-300">{titleCase(profile.jobTitle) || 'Job title unknown'}</p>
+            <h3 dir="auto" className="truncate font-semibold text-ink rtl:text-right">{name}</h3>
+            <p dir="auto" className="truncate text-sm text-ink-body rtl:text-right">
+              {titleCase(profile.jobTitle) || t('card.noJobTitle')}
+            </p>
             {profile.companyName ? (
-              <p className="truncate text-sm text-muted">{titleCase(profile.companyName)}</p>
+              <p dir="auto" className="truncate text-sm text-muted rtl:text-right">{titleCase(profile.companyName)}</p>
             ) : null}
           </div>
           {profile.connections !== null ? (
-            <span className="shrink-0 text-right text-xs text-muted">
-              {formatNumber(profile.connections)}
-              <span className="block">connections</span>
+            <span className="shrink-0 text-end text-xs text-muted">
+              <span className="tabular-nums">{formatNumber(profile.connections)}</span>
+              <span className="block">{t('card.connections')}</span>
             </span>
           ) : null}
         </div>
@@ -76,20 +88,20 @@ export default function ResultCard({
         <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-muted">
           {location ? (
             <div className="col-span-2 truncate">
-              <dt className="sr-only">Location</dt>
-              <dd className="truncate">{location}</dd>
+              <dt className="sr-only">{t('card.location')}</dt>
+              <dd dir="auto" className="truncate rtl:text-right">{location}</dd>
             </div>
           ) : null}
           {profile.jobTitleRole ? (
             <div className="truncate">
-              <dt className="sr-only">Role</dt>
-              <dd className="truncate">{humanize(profile.jobTitleRole)}</dd>
+              <dt className="sr-only">{t('card.role')}</dt>
+              <dd dir="auto" className="truncate rtl:text-right">{humanize(profile.jobTitleRole)}</dd>
             </div>
           ) : null}
           {profile.inferredYears !== null ? (
             <div className="truncate">
-              <dt className="sr-only">Experience</dt>
-              <dd>{profile.inferredYears} yrs experience</dd>
+              <dt className="sr-only">{t('card.experience')}</dt>
+              <dd>{t('card.yearsExperience', { years: formatNumber(profile.inferredYears) })}</dd>
             </div>
           ) : null}
         </dl>
@@ -99,11 +111,13 @@ export default function ResultCard({
             {shown.map((skill) => (
               <li key={skill} className={matched.has(skill) ? 'chip chip-match' : 'chip'}>
                 {titleCase(skill)}
-                {matched.has(skill) ? <span className="sr-only"> (matches your search)</span> : null}
+                {matched.has(skill) ? <span className="sr-only">{t('card.matchesSearch')}</span> : null}
               </li>
             ))}
             {profile.skillCount > shown.length ? (
-              <li className="chip border-dashed text-muted">+{profile.skillCount - shown.length} more</li>
+              <li className="chip border-dashed text-muted">
+                {t('card.moreSkills', { count: formatNumber(profile.skillCount - shown.length) })}
+              </li>
             ) : null}
           </ul>
         ) : null}

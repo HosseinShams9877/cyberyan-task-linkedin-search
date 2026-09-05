@@ -1,16 +1,20 @@
 import { Bar, BarChart, CartesianGrid, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { Bucket } from '../../lib/api-types';
+import { formatNumber } from '../../lib/format';
 import ChartTooltip from './ChartTooltip';
-import { AXIS_TICK, BAR_SIZE, CHART } from './theme';
+import { BAR_SIZE, useChart } from './theme';
 
 /**
  * Columns for an ordered scale with short labels. Only the tallest column is
  * direct-labelled - a number on every cap goes unread - and the y-axis ticks carry
  * the rest.
+ *
+ * In Persian the categories run right to left, which is the reading order of the
+ * ordered scale, and the value axis moves to the right edge.
  */
 export default function BucketColumns({
   rows,
-  unit = 'profiles',
+  unit,
   height = 220,
   total,
 }: {
@@ -20,6 +24,7 @@ export default function BucketColumns({
   /** Share denominator; defaults to the sum of the rows. Matches ChartCard's. */
   total?: number;
 }) {
+  const { chart, rtl, axisTick } = useChart();
   const whole = total ?? rows.reduce((sum, row) => sum + row.count, 0);
   const peak = Math.max(0, ...rows.map((row) => row.count));
   const data = rows.map((row) => ({
@@ -32,30 +37,31 @@ export default function BucketColumns({
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <BarChart data={data} margin={{ top: 18, right: 4, bottom: 4, left: -18 }}>
-        <CartesianGrid vertical={false} stroke={CHART.grid} strokeWidth={1} />
+      <BarChart
+        data={data}
+        margin={rtl ? { top: 18, right: -18, bottom: 4, left: 4 } : { top: 18, right: 4, bottom: 4, left: -18 }}
+      >
+        <CartesianGrid vertical={false} stroke={chart.grid} strokeWidth={1} />
         <XAxis
           dataKey="label"
-          tick={AXIS_TICK}
+          reversed={rtl}
+          tick={axisTick}
           tickLine={false}
-          axisLine={{ stroke: CHART.grid }}
+          axisLine={{ stroke: chart.grid }}
           interval={0}
         />
         <YAxis
-          tick={AXIS_TICK}
+          orientation={rtl ? 'right' : 'left'}
+          tick={axisTick}
           tickLine={false}
           axisLine={false}
           width={56}
-          tickFormatter={(value: number) => value.toLocaleString('en-US')}
+          tickFormatter={(value: number) => formatNumber(value)}
         />
-        <Tooltip
-          content={<ChartTooltip unit={unit} />}
-          cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-          animationDuration={120}
-        />
+        <Tooltip content={<ChartTooltip unit={unit} />} cursor={{ fill: chart.cursor }} animationDuration={120} />
         <Bar
           dataKey="count"
-          fill={CHART.series}
+          fill={chart.series}
           barSize={BAR_SIZE}
           radius={[4, 4, 0, 0]}
           isAnimationActive={false}
@@ -65,9 +71,9 @@ export default function BucketColumns({
             dataKey="peak"
             position="top"
             offset={6}
-            fill={CHART.inkMuted}
+            fill={chart.inkMuted}
             fontSize={11}
-            formatter={(value: unknown) => (typeof value === 'number' ? value.toLocaleString('en-US') : '')}
+            formatter={(value: unknown) => (typeof value === 'number' ? formatNumber(value) : '')}
           />
         </Bar>
       </BarChart>

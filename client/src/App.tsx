@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import Dashboard from './components/Dashboard';
 import FilterSelect from './components/FilterSelect';
+import PrefsToggles from './components/PrefsToggles';
 import ProfileDrawer from './components/ProfileDrawer';
 import ResultList from './components/ResultList';
 import SearchBar from './components/SearchBar';
-import { titleCase } from './lib/format';
+import { usePrefs, useT } from './i18n';
+import type { MessageKey } from './i18n/en';
+import { formatNumber, titleCase } from './lib/format';
 import { activeFilterCount, useSearchStore, type SortKey } from './store/useSearchStore';
 
 type Tab = 'search' | 'dashboard';
@@ -14,15 +17,16 @@ const tabFromHash = (): Tab => (window.location.hash === '#dashboard' ? 'dashboa
 
 
 const YEAR_OPTIONS = [2, 5, 10, 15, 20];
-const SORTS: { value: SortKey; label: string }[] = [
-  { value: 'relevance', label: 'Best match' },
-  { value: 'name', label: 'Name (A-Z)' },
-  { value: 'connections', label: 'Most connections' },
-  { value: 'experience', label: 'Most experience' },
+const SORTS: { value: SortKey; label: MessageKey }[] = [
+  { value: 'relevance', label: 'sort.relevance' },
+  { value: 'name', label: 'sort.name' },
+  { value: 'connections', label: 'sort.connections' },
+  { value: 'experience', label: 'sort.experience' },
 ];
 
 /** One row of controls, above everything they scope. */
 function Filters() {
+  const t = useT();
   const filters = useSearchStore((s) => s.filters);
   const options = useSearchStore((s) => s.options);
   const setFilter = useSearchStore((s) => s.setFilter);
@@ -36,38 +40,38 @@ function Filters() {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <FilterSelect
           id="jobTitle"
-          label="Job title"
+          label={t('filters.jobTitle')}
           value={filters.jobTitle}
           options={options?.jobTitles}
           format={titleCase}
-          placeholder="Any job title"
+          placeholder={t('filters.anyJobTitle')}
           onChange={(value) => setFilter('jobTitle', value)}
         />
         <FilterSelect
           id="skill"
-          label="Skill"
+          label={t('filters.skill')}
           value={filters.skill}
           options={options?.skills}
           format={titleCase}
-          placeholder="Any skill"
+          placeholder={t('filters.anySkill')}
           onChange={(value) => setFilter('skill', value)}
         />
         <FilterSelect
           id="industry"
-          label="Industry"
+          label={t('filters.industry')}
           value={filters.industry}
           options={options?.industries}
           format={titleCase}
-          placeholder="Any industry"
+          placeholder={t('filters.anyIndustry')}
           onChange={(value) => setFilter('industry', value)}
         />
         <FilterSelect
           id="country"
-          label="Country"
+          label={t('filters.country')}
           value={filters.country}
           options={options?.countries}
           format={titleCase}
-          placeholder="Any country"
+          placeholder={t('filters.anyCountry')}
           onChange={(value) => setFilter('country', value)}
         />
       </div>
@@ -75,7 +79,7 @@ function Filters() {
       <div className="flex flex-wrap items-end gap-3">
         <div>
           <label htmlFor="minYears" className="mb-1.5 block text-xs font-medium text-muted">
-            Minimum experience
+            {t('filters.minYears')}
           </label>
           <select
             id="minYears"
@@ -83,10 +87,10 @@ function Filters() {
             value={filters.minYears}
             onChange={(event) => setFilter('minYears', event.target.value)}
           >
-            <option value="">Any</option>
+            <option value="">{t('filters.anyYears')}</option>
             {YEAR_OPTIONS.map((years) => (
               <option key={years} value={String(years)}>
-                {years}+ years
+                {t('filters.yearsPlus', { years: formatNumber(years) })}
               </option>
             ))}
           </select>
@@ -94,7 +98,7 @@ function Filters() {
 
         <div>
           <label htmlFor="sort" className="mb-1.5 block text-xs font-medium text-muted">
-            Sort by
+            {t('filters.sort')}
           </label>
           <select
             id="sort"
@@ -104,29 +108,29 @@ function Filters() {
           >
             {SORTS.map((sort) => (
               <option key={sort.value} value={sort.value}>
-                {sort.label}
+                {t(sort.label)}
               </option>
             ))}
           </select>
         </div>
 
-        <label className="flex cursor-pointer items-center gap-2 py-2 text-sm text-slate-200">
+        <label className="flex cursor-pointer items-center gap-2 py-2 text-sm text-ink-body">
           <input
             type="checkbox"
             className="h-4 w-4 accent-brand"
             checked={filters.hasEmail}
             onChange={(event) => setFilter('hasEmail', event.target.checked)}
           />
-          Has an email on file
+          {t('filters.hasEmail')}
         </label>
 
         <button
           type="button"
-          className="btn-ghost ml-auto"
+          className="btn-ghost ms-auto"
           onClick={resetFilters}
           disabled={count === 0 && filters.sort === 'relevance'}
         >
-          Clear {count > 0 ? `(${count})` : 'filters'}
+          {count > 0 ? t('filters.clearCount', { count: formatNumber(count) }) : t('filters.clear')}
         </button>
       </div>
     </div>
@@ -134,6 +138,7 @@ function Filters() {
 }
 
 export default function App() {
+  const { t, dir } = usePrefs();
   const [tab, setTab] = useState<Tab>(tabFromHash);
   const loadOptions = useSearchStore((s) => s.loadOptions);
   const search = useSearchStore((s) => s.search);
@@ -156,22 +161,41 @@ export default function App() {
 
   const tabClass = (value: Tab) =>
     `rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${
-      tab === value ? 'bg-surface-2 text-slate-50' : 'text-muted hover:text-slate-200'
+      tab === value ? 'bg-surface-2 text-ink shadow-sm' : 'text-muted hover:text-ink-body'
     }`;
 
   return (
-    <div className="min-h-dvh">
-      <header className="sticky top-0 z-30 border-b border-line/60 bg-canvas/90 backdrop-blur">
+    // `dir` is on <html> for the cascade; repeating it here keeps React's own
+    // subtree consistent and is what the drawer portal-less overlay inherits.
+    <div className="min-h-dvh" dir={dir}>
+      {/*
+        A wash behind the glass. Fixed, so it does not scroll with the content, and
+        `pointer-events-none` so it never intercepts a click.
+      */}
+      <div
+        className="pointer-events-none fixed inset-0 -z-10 opacity-70"
+        style={{
+          background:
+            'radial-gradient(55rem 38rem at 12% -12%, color-mix(in oklab, var(--color-brand) 12%, transparent), transparent 60%),' +
+            'radial-gradient(45rem 32rem at 100% 0%, color-mix(in oklab, var(--color-brand-strong) 10%, transparent), transparent 60%)',
+        }}
+        aria-hidden="true"
+      />
+
+      <header className="pane sticky top-0 z-30 border-b">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
-          <h1 className="flex items-center gap-2 text-base font-semibold text-slate-50">
+          <h1 className="flex items-center gap-2 text-base font-semibold text-ink">
             <span className="grid h-7 w-7 place-items-center rounded-md bg-brand-strong text-xs font-bold text-white">
               in
             </span>
-            LinkedIn Dataset Search
+            {t('app.title')}
           </h1>
-          <nav className="ml-auto flex gap-1 rounded-xl border border-line/60 bg-surface/60 p-1" aria-label="Views">
+          <nav
+            className="ms-auto flex gap-1 rounded-xl border border-line/60 bg-surface/60 p-1"
+            aria-label={t('nav.views')}
+          >
             <button type="button" className={tabClass('search')} aria-current={tab === 'search'} onClick={() => show('search')}>
-              Search
+              {t('nav.search')}
             </button>
             <button
               type="button"
@@ -179,9 +203,10 @@ export default function App() {
               aria-current={tab === 'dashboard'}
               onClick={() => show('dashboard')}
             >
-              Dashboard
+              {t('nav.dashboard')}
             </button>
           </nav>
+          <PrefsToggles />
         </div>
       </header>
 
@@ -197,9 +222,24 @@ export default function App() {
       </main>
 
       <footer className="mx-auto max-w-7xl px-4 pb-8 text-xs text-muted">
+        {/*
+          The path is a code span, so the sentence is split around its {path} slot
+          instead of interpolated - which also lets a translator move the slot to
+          wherever the grammar needs it.
+        */}
         <p>
-          Records were parsed from the file in <code className="text-slate-300">./data</code>. Email addresses and
-          phone numbers stay on the server and are only ever reported as counts.
+          {t('footer.note')
+            .split('{path}')
+            .flatMap((part, index) =>
+              index === 0
+                ? [part]
+                : [
+                    <code key="path" className="text-ink-soft" dir="ltr">
+                      ./data
+                    </code>,
+                    part,
+                  ],
+            )}
         </p>
       </footer>
 
