@@ -9,6 +9,14 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
+ * "There is room for the filter panel to stand open." Wide enough for the selects to
+ * sit two or four across, and tall enough that a pinned bar holding them still leaves
+ * results on screen. Both halves matter: a phone in landscape clears the width and
+ * fails the height, which is why this is not just `sm:`.
+ */
+@custom-variant roomy (@media (width >= 40rem) and (height >= 37.5rem));
+
+/*
  * Semantic tokens. The light values live here on :root; the dark set overrides the
  * same custom properties in the base layer below. Everything downstream is written
  * against roles - `bg-surface`, `text-ink`, `border-line` - so a component needs no
@@ -65,8 +73,19 @@
     --shadow-pane: 0 1px 2px oklch(0 0 0 / 0.3), 0 10px 30px -14px oklch(0 0 0 / 0.6);
   }
 
+  /*
+   * The page itself never scrolls sideways. The only box that can outgrow a narrow
+   * viewport is the results grid, and it carries its own `overflow-x-auto`, so that
+   * scroll stays inside the cards while the sticky header and filter bar hold still.
+   *
+   * On the root element, not on `body` or a wrapper div: the root's overflow
+   * propagates to the viewport, which stays the scrollport that `position: sticky`
+   * resolves against. Set on a descendant instead, that box becomes the scrollport -
+   * one that never scrolls - and every sticky element inside it stops pinning.
+   */
   html {
     color-scheme: light;
+    overflow-x: hidden;
   }
 
   html.dark {

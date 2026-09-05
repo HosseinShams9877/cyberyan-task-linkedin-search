@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" dir="ltr" class="dark h-full">
+<html lang="en" dir="ltr" class="h-full">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -33,14 +33,16 @@
         The stored language and theme have to be on <html> before the first paint, or a
         dark-theme user gets a white flash and a Persian user a frame of LTR layout.
         This is the same write as applyPrefs() in src/i18n; it runs once, ahead of the
-        bundle, and React then re-applies the identical values.
+        bundle, and React then re-applies the identical values. The fallbacks below must
+        stay in step with DEFAULT_LANG and DEFAULT_THEME there, and with the class list
+        on <html> above.
       */
       (function () {
         try {
           var lang = localStorage.getItem('lds.lang');
           var theme = localStorage.getItem('lds.theme');
           if (lang !== 'en' && lang !== 'fa') lang = 'en';
-          if (theme !== 'dark' && theme !== 'light') theme = 'dark';
+          if (theme !== 'dark' && theme !== 'light') theme = 'light';
           var root = document.documentElement;
           root.lang = lang;
           root.dir = lang === 'fa' ? 'rtl' : 'ltr';

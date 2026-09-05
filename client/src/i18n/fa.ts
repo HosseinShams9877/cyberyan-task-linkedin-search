@@ -42,6 +42,8 @@ const fa: Record<MessageKey, string> = {
   'filters.clear': 'پاک کردن پالایه‌ها',
   'filters.clearCount': 'پاک کردن ({count})',
   'filters.optionCount': '{label} ({count})',
+  'filters.toggle': 'پالایه‌ها',
+  'filters.toggleCount': 'پالایه‌ها ({count})',
 
   'sort.relevance': 'مرتبط‌ترین',
   'sort.name': 'نام (الفبایی)',

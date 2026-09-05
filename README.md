@@ -268,13 +268,56 @@ role, industry, employer, country, connection band and inferred salary band. Eve
 chart has a `Table` toggle that lists the same rows with counts and shares, so no
 value is reachable only by hovering.
 
+### Layout: what pins and what scrolls
+
+The header and the filter bar sit in one `sticky top-0 z-30` wrapper, so the filters
+pin with the header instead of having to know its height, and both spans stay exactly
+as wide as the page. Only one box on the page is allowed to scroll sideways, and it is
+the results grid.
+
+`overflow-x: hidden` goes on `html`, not on `body` and not on a wrapper `div`. The root
+element's used overflow propagates to the viewport, which stays the scrollport that
+`position: sticky` resolves against; set the same rule on a descendant and *that* box
+becomes the scrollport - one that never scrolls - and every sticky element inside it
+silently stops pinning. Verified in the browser: `html=hidden`, `body=visible`,
+`position=sticky`, and the bar's box still at `0,0` after a 600 px scroll.
+
+The grid inside `ResultList` spells its tracks out - `grid-cols-[repeat(1,minmax(18rem,1fr))]`,
+two at `sm`, three at `xl` - rather than `grid-cols-1 sm:grid-cols-2 xl:grid-cols-3`.
+A numeric count compiles to `minmax(0, 1fr)`, a floor of zero, and a card's lines are
+`truncate`d: `white-space: nowrap` gives them a min-content width in the hundreds of
+pixels, so a squeezed track hands the overflow back to the page and the whole layout
+drifts under the pinned bar. With the 18 rem floor the card measures 408 / 355 / 343 px
+at 1440 / 768 / 390, and at 320 the grid is 288 px inside a 273 px container - 15 px of
+scroll that stays in the cards. The bar does not move when that scroll is driven to
+either end (`scrollLeft` +15 in English, -15 in Persian, where the axis runs the other
+way and 0 is the right edge), and the page itself still has nothing to scroll.
+
+A pinned bar costs height the results never get back, and the four selects stack on a
+phone: left standing open the bar measured 591 px of an 844 px screen. So unless there
+is room for it, everything but the keyword box collapses behind a *Filters* button that
+carries the active count. "Room" is one `@custom-variant roomy` in `index.css` - 40 rem
+wide **and** 37.5 rem tall - because a phone in landscape clears the width and fails the
+height. Collapsed, the bar is 194 px of an 844 px screen; open on a desktop it is 292 px
+of 900.
+
+The height cap and its scroll live on the filter panel, not on the sticky bar. A scroll
+container reserves a classic scrollbar's width from its children, and on the bar that
+left the header 360 px wide on a 375 px page - visibly short of the full width it is
+supposed to span. On the panel the same guard is invisible: `-mx-4 px-4` cancels out, so
+the panel bleeds to the strip's padding edge, keeps the clipping edge clear of the focus
+ring on the outermost control, and puts the scrollbar where the strip already ends.
+
 ---
 
 ## 4. Language, theme and direction
 
 Two buttons in the header, top right: one swaps the language, one swaps the theme.
-The defaults are **English** and **dark**. Both choices persist in `localStorage`
-under `lds.lang` and `lds.theme`, so a reload keeps them.
+A first-time visitor gets **English**, left-to-right, on a **light** background;
+`DEFAULT_LANG` and `DEFAULT_THEME` in `client/src/i18n/index.tsx` are the single
+place that says so, and the pre-paint script in `client/index.html` repeats the same
+two fallbacks. Both choices persist in `localStorage` under `lds.lang` and
+`lds.theme`, so a reload keeps whatever the visitor picked.
 
 Everything hangs off three attributes on `<html>`:
 
@@ -287,8 +330,8 @@ Everything hangs off three attributes on `<html>`:
 ### No flash on first paint
 
 An inline script in `client/index.html` reads both keys and stamps those three
-attributes **before** the bundle loads, so a user who chose light Persian never
-sees a frame of dark English. `applyPrefs()` in `client/src/i18n/index.tsx` performs
+attributes **before** the bundle loads, so a user who chose dark Persian never
+sees a frame of light English. `applyPrefs()` in `client/src/i18n/index.tsx` performs
 the same three writes on every later toggle. If `localStorage` throws - a sandboxed
 iframe, Safari private mode - the script falls through to the markup defaults and
 the app still renders.
@@ -315,6 +358,41 @@ Dataset values - names, job titles, skills, company names, profile summaries - s
 in English in both languages, because they come from the source file rather than a
 catalogue. The English prose blocks in the profile drawer carry `dir="ltr"` so their
 punctuation stays put on a Persian page.
+
+### Dates and the Jalali calendar
+
+Persian does not just relabel a Gregorian date - it converts it. `formatDate()` in
+`client/src/lib/format.ts` runs every date through `Intl.DateTimeFormat` with the
+locale the provider set: `en-US` on a Gregorian calendar, or
+`fa-IR-u-ca-persian` on the Jalali one. `2001-11-01` therefore reads
+`November 1, 2001` in English and `۱۰ آبان ۱۳۸۰` in Persian, in Persian digits. That
+covers the drawer's *Started* fact, the birth year, and both date ranges (work
+experience and education); the range separator is an en dash, which is direction-
+neutral, so the pair reads start-to-end either way.
+
+The dataset gives dates at three precisions - `2019`, `2019-10`, `2019-10-08` - and
+the output keeps whichever it was given rather than inventing a day. Converting a
+partial date needs an anchor, and the choice of anchor is not free, because a Jalali
+year begins around 21 March:
+
+| Source | Anchored on | Persian | Why |
+|---|---|---|---|
+| `2019-10-08` | the day itself | `۱۶ مهر ۱۳۹۸` | exact |
+| `2019-10` | the 1st | `مهر ۱۳۹۸` | a Gregorian month starts around the 10th of a Jalali one, so most of its days fall in the month the 1st lands in |
+| `2019` | 1 July | `۱۳۹۸` | 1 January would land in `۱۳۹۷`, the year that covers only 79 days of 2019; 1 July picks the year that covers the other 286 |
+
+So a year-only value carries the ±1 ambiguity the source already has - `2019` alone
+cannot say whether it means `۱۳۹۷` or `۱۳۹۸` - and the majority year is the answer
+that is right more often. Birth years go through the same path via `formatYear()`,
+which also keeps 1958 from being printed as `1,958` by the thousands separator.
+
+Persian always takes the abbreviated skeleton, because Persian month names have no
+short form (`MMM` and `MMMM` both give `مهر`) and only that skeleton puts the month
+before the year the way a Persian date is written - ICU's long form renders
+`۱۳۹۸ مهر`. English keeps both styles: months spelled out for a date standing alone
+in the facts list, abbreviated inside a range. Anything that does not parse as a date
+is passed through untouched, because the source is a dump and a field holding a phone
+number should look wrong rather than plausible.
 
 ### The dark strategy in Tailwind v4
 
@@ -374,6 +452,10 @@ page direction, so the line still starts at the start edge of its card. `auto`
 rather than a fixed `ltr` because those same slots fall back to a Persian string
 when the record has no value.
 
+The pinned bar and the results' own horizontal scroll are direction-agnostic for the
+same reason - logical properties and a scroll container that is measured, not assumed.
+See *Layout: what pins and what scrolls* above for the numbers on both sides.
+
 Recharts is the exception. It has no RTL mode: marks are placed from absolute SVG
 coordinates and an axis domain, and CSS `direction` cannot mirror a plot. So
 `.recharts-wrapper` is pinned to `direction: ltr` to keep the internal coordinate
@@ -406,6 +488,11 @@ follows without touching a single component.
 None. The i18n layer is a React context written in this repo, so `client/package.json`
 gained no dependency and the Vercel install and build steps are byte-for-byte what
 they were. The fonts are two `<link>` tags in the static HTML.
+
+The Jalali calendar is the same story: it comes from `Intl.DateTimeFormat`, which every
+target browser and the Node version Vercel builds with already carry, so no date library
+was added either. The layout rules are plain CSS and one `@custom-variant`, which Tailwind
+compiles into the same stylesheet it was already emitting.
 
 ---
 

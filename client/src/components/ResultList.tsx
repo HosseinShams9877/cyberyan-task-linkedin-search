@@ -70,12 +70,26 @@ export default function ResultList() {
         </span>
       </p>
 
-      <div
-        className={`grid gap-3 transition-opacity sm:grid-cols-2 xl:grid-cols-3 ${loading ? 'opacity-60' : ''}`}
-      >
-        {results.results.map((profile) => (
-          <ResultCard key={profile.id} profile={profile} matchTerms={matchTerms} onOpen={openProfile} />
-        ))}
+      {/*
+        The only box on the page allowed to scroll sideways. A card's lines are
+        `truncate`d, so `white-space: nowrap` gives them a min-content width in the
+        hundreds of pixels; below the 18rem track floor the row outgrows a phone and
+        that scroll stays here instead of dragging the sticky header with it.
+
+        The tracks are spelled out rather than left to `grid-cols-1/2/3`, because a
+        numeric count compiles to `minmax(0, 1fr)` - a floor of zero, which squeezes a
+        card until its own content forces the overflow back onto the page.
+      */}
+      <div className="overflow-x-auto">
+        <div
+          className={`grid gap-3 transition-opacity grid-cols-[repeat(1,minmax(18rem,1fr))] sm:grid-cols-[repeat(2,minmax(18rem,1fr))] xl:grid-cols-[repeat(3,minmax(18rem,1fr))] ${
+            loading ? 'opacity-60' : ''
+          }`}
+        >
+          {results.results.map((profile) => (
+            <ResultCard key={profile.id} profile={profile} matchTerms={matchTerms} onOpen={openProfile} />
+          ))}
+        </div>
       </div>
 
       <Pagination />

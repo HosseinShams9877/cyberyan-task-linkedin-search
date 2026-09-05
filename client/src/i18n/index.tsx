@@ -6,9 +6,13 @@ import fa from './fa';
 export type Lang = 'en' | 'fa';
 export type Theme = 'dark' | 'light';
 
-/** Defaults: English, and dark because that is the original design. */
+/**
+ * What a first-time visitor gets: English, left-to-right, on a white page. Both are
+ * only defaults - the header toggles switch either one, and the choice is remembered in
+ * localStorage, so a returning visitor never sees these again.
+ */
 export const DEFAULT_LANG: Lang = 'en';
-export const DEFAULT_THEME: Theme = 'dark';
+export const DEFAULT_THEME: Theme = 'light';
 
 const CATALOGUES: Record<Lang, Record<MessageKey, string>> = { en, fa };
 const LOCALES: Record<Lang, string> = { en: 'en-US', fa: 'fa-IR' };

@@ -43,6 +43,8 @@ const en = {
   'filters.clear': 'Clear filters',
   'filters.clearCount': 'Clear ({count})',
   'filters.optionCount': '{label} ({count})',
+  'filters.toggle': 'Filters',
+  'filters.toggleCount': 'Filters ({count})',
 
   'sort.relevance': 'Best match',
   'sort.name': 'Name (A-Z)',

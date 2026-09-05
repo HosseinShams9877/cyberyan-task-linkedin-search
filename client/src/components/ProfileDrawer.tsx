@@ -2,10 +2,11 @@ import { useEffect } from 'react';
 import { usePrefs, useT } from '../i18n';
 import type { ProfileDetail } from '../lib/api-types';
 import {
-  formatMonth,
+  formatDate,
   formatNumber,
   formatRange,
   formatSalary,
+  formatYear,
   humanize,
   initials,
   titleCase,
@@ -62,7 +63,7 @@ function Body({ profile }: { profile: ProfileDetail }) {
             [t('fact.speciality'), humanize(profile.jobTitleSubRole)],
             [t('fact.seniority'), profile.jobTitleLevels.map(humanize).join(', ')],
             [t('fact.industry'), titleCase(profile.industry)],
-            [t('fact.started'), formatMonth(profile.jobStartDate, '')],
+            [t('fact.started'), formatDate(profile.jobStartDate, '', 'long')],
             [
               t('fact.experience'),
               profile.inferredYears === null
@@ -74,7 +75,7 @@ function Body({ profile }: { profile: ProfileDetail }) {
             [t('fact.location'), titleCase(profile.locationName)],
             [t('fact.region'), titleCase(profile.region)],
             [t('fact.country'), titleCase(profile.country)],
-            [t('fact.birthYear'), profile.birthYear === null ? '' : formatNumber(profile.birthYear)],
+            [t('fact.birthYear'), formatYear(profile.birthYear, '')],
             [t('fact.gender'), titleCase(profile.gender)],
           ]}
         />
